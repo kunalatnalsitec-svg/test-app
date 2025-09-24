@@ -4,31 +4,50 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Flipkart Auto Open</title>
-  <style>body{margin:0;padding:0}</style>
+  <style>body{font-family:sans-serif;padding:18px}</style>
 </head>
 <body>
+  <h3>Opening Flipkart product...</h3>
+  <p id="status">Please wait...</p>
+
 <script>
 const PRODUCT_URL = "https://www.flipkart.com/lg-7-kg-5-star-inverter-direct-drive-technology-6-motion-dd-reduce-germs-allergens-steam-cycles-in-built-heater-touch-panel-fully-automatic-front-load-washing-machine-black-grey/p/itmfb403416d27a3?pid=WMNH7SPNGXDGUKVE&lid=LSTWMNH7SPNGXDGUKVEZAHO0B";
+const statusEl = document.getElementById('status');
 
 function isAndroid(){ return /Android/i.test(navigator.userAgent); }
 function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
 
+function log(msg){ statusEl.innerText = msg; console.log(msg); }
+
 function openFlipkart() {
-  if(isAndroid()){
+  if (isAndroid()) {
+    // Android: Use intent:// so it opens directly in Flipkart app
     const u = new URL(PRODUCT_URL);
-    const hostPath = u.hostname + u.pathname + (u.search||'') + (u.hash||'');
+    const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
     const fallback = encodeURIComponent(PRODUCT_URL);
-    window.location.href = `intent://${hostPath}#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=${fallback};end`;
+    const intentUri = `intent://${hostPath}#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=${fallback};end`;
+    log("Opening Flipkart app on Android...");
+    window.location.href = intentUri;
     return;
   }
-  if(isIOS()){
-    // Trigger Universal Link first (opens correct product in app if installed)
-    window.location.href = PRODUCT_URL;
-    // After short delay, try scheme fallback in case Universal Link fails
-    setTimeout(()=>{ window.location.href = PRODUCT_URL.replace(/^https?:\/\//,"flipkart://"); },1200);
+
+  if (isIOS()) {
+    // iOS: First load Safari (this page), then after small delay try to open the app
+    log("Opening product in Safari, then Flipkart app...");
+    setTimeout(() => {
+      // Try universal link (works if Flipkart supports it)
+      window.location = PRODUCT_URL;
+      // After 1.2s, fallback to scheme if app not opened
+      setTimeout(() => {
+        const scheme = PRODUCT_URL.replace(/^https?:\/\//, "flipkart://");
+        window.location = scheme;
+      }, 1200);
+    }, 800);
     return;
   }
-  // Desktop fallback
+
+  // Desktop or unknown: open web link
+  log("Opening product page in browser...");
   window.location.href = PRODUCT_URL;
 }
 
