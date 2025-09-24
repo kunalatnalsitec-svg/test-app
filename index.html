@@ -1,36 +1,92 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Open Flipkart App</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 18px; }
+    #log { margin-top:12px; color:#333; white-space:pre-wrap; }
+  </style>
+</head>
+<body>
+  <h3>Opening Flipkart link in app...</h3>
+  <div id="log"></div>
+
 <script>
-const PRODUCT_URL = "https://www.flipkart.com/lg-7-kg-5-star-inverter-direct-drive-technology-6-motion-dd-reduce-germs-allergens-steam-cycles-in-built-heater-touch-panel-fully-automatic-front-load-washing-machine-black-grey/p/itmfb403416d27a3?pid=WMNH7SPNGXDGUKVE&lid=LSTWMNH7SPNGXDGUKVEZAHO0B";
-const statusEl = document.getElementById('status');
+const FLIPKART_URL = "https://dl.flipkart.com/lg-7-kg-5-star-inverter-direct-drive-technology-6-motion-dd-reduce-germs-allergens-steam-cycles-in-built-heater-touch-panel-fully-automatic-front-load-washing-machine-black-grey/p/itmfb403416d27a3?pid=WMNH7SPNGXDGUKVE&lid=LSTWMNH7SPNGXDGUKVEZAHO0B&otracker=clp_banner_1_3.bannerX3.BANNER_tvs-and-appliances-new-clp-store_KDYTCEI5OBKZ&fm=neo%2Fmerchandising&iid=M_4525339d-b3aa-4082-8aea-aafcffcf40c8_3.KDYTCEI5OBKZ&ppt=None&ppn=None&ssid=d38uqkzq9s0000001758723188396";
+
+const logEl = document.getElementById('log');
+function log(...args){ logEl.textContent += args.join(' ') + "\n"; console.log(...args); }
 
 function isAndroid(){ return /Android/i.test(navigator.userAgent); }
-function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
+function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream; }
 
-function log(msg){ statusEl.innerText = msg; console.log(msg); }
+function openFlipkartInApp(){
+  const webUrl = FLIPKART_URL;
+  log('Attempting to open:', webUrl);
+  let launched = false;
 
-function openFlipkart() {
-  if (isAndroid()) {
-    const u = new URL(PRODUCT_URL);
-    const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
-    const fallback = encodeURIComponent(PRODUCT_URL);
-    const intentUri = `intent://${hostPath}#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=${fallback};end`;
-    log("Opening Flipkart app on Android...");
-    window.location.href = intentUri;
+  function markLaunched(){ launched = true; log('Visibility change: page hidden -> assume app opened'); }
+  document.addEventListener('visibilitychange', ()=> {
+    if (document.hidden) markLaunched();
+  }, { once: false });
+
+  if (isAndroid()){
+    try {
+      const u = new URL(webUrl);
+      const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
+      const fallback = encodeURIComponent(webUrl);
+      const intentUri = `intent://${hostPath}#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=${fallback};end`;
+      log('Android: navigating to intent URI');
+      window.location.href = intentUri;
+      setTimeout(()=> {
+        if (!launched) {
+          log('No app open detected — redirecting to web fallback');
+          window.location.href = webUrl;
+        } else {
+          log('App likely opened.');
+        }
+      }, 2000);
+    } catch(e){
+      log('Error building intent URI, falling back to web URL', e);
+      window.location.href = webUrl;
+    }
     return;
   }
 
-  if (isIOS()) {
-    // iOS: Use dl.flipkart.com deep link
-    const encodedUrl = encodeURIComponent(PRODUCT_URL);
-    const deepLink = `https://dl.flipkart.com/dl/${encodedUrl}`;
-    log("Opening product via Flipkart deep link...");
-    window.location.href = deepLink;
+  if (isIOS()){
+    const schemeGuess = webUrl.replace(/^https?:\/\//, 'flipkart://');
+    log('iOS: trying scheme:', schemeGuess);
+    const ifr = document.createElement('iframe');
+    ifr.style.display = 'none';
+    ifr.src = schemeGuess;
+    document.body.appendChild(ifr);
+
+    setTimeout(()=>{
+      if (!launched) {
+        log('Scheme attempt not detected — trying universal https link');
+        window.location.href = webUrl;
+      } else {
+        log('App opened via scheme.');
+      }
+    }, 800);
+
+    setTimeout(()=>{
+      if (!launched) {
+        log('Final fallback: opening web page');
+        window.location.href = webUrl;
+      }
+    }, 2000);
     return;
   }
 
-  // Desktop or unknown
-  log("Opening product page in browser...");
-  window.location.href = PRODUCT_URL;
+  log('Desktop/unknown platform — opening web URL');
+  window.location.href = webUrl;
 }
 
-window.onload = openFlipkart;
+// Auto-run on page load
+window.onload = openFlipkartInApp;
 </script>
+</body>
+</html>
