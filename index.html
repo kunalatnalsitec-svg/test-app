@@ -7,15 +7,13 @@
 <style>
 body { font-family: system-ui, sans-serif; padding: 18px; }
 #log { margin-top:12px; color:#333; white-space:pre-wrap; }
-button { padding: 12px 20px; font-size:16px; margin-top:20px; }
 </style>
-<!-- Optional: Mimic Flipkart Smart App Banner meta -->
+<!-- Mimic Flipkart Smart App Banner -->
 <meta name="apple-itunes-app" content="app-id=836619110, app-argument=https://www.flipkart.com/lg-7-kg-5-star-inverter-direct-drive-technology-6-motion-dd-reduce-germs-allergens-steam-cycles-in-built-heater-touch-panel-fully-automatic-front-load-washing-machine-black-grey/p/itmfb403416d27a3">
 </head>
 <body>
-<h3>Open Flipkart Product</h3>
+<h3>Opening Flipkart product...</h3>
 <div id="log"></div>
-<button id="openBtn">Open in Flipkart</button>
 
 <script>
 const FLIPKART_URL = "https://www.flipkart.com/lg-7-kg-5-star-inverter-direct-drive-technology-6-motion-dd-reduce-germs-allergens-steam-cycles-in-built-heater-touch-panel-fully-automatic-front-load-washing-machine-black-grey/p/itmfb403416d27a3";
@@ -28,7 +26,6 @@ function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent) && !windo
 function isInstagram(){ return /Instagram/i.test(navigator.userAgent); }
 
 function openFlipkartApp() {
-    // Instagram on iOS: open Safari first
     if (isInstagram() && isIOS()) {
         log("Instagram iOS detected — opening Safari first...");
         const safariLink = document.createElement('a');
@@ -39,7 +36,6 @@ function openFlipkartApp() {
         return;
     }
 
-    // Android: use intent://
     if (isAndroid()) {
         log("Android: opening intent URI");
         const u = new URL(FLIPKART_URL);
@@ -50,22 +46,17 @@ function openFlipkartApp() {
         return;
     }
 
-    // iOS Safari or other browsers: open universal link
     if (isIOS()) {
         log("iOS Safari: opening universal link");
         window.location.href = FLIPKART_URL;
         return;
     }
 
-    // Desktop / unknown: fallback to web page
     log("Desktop/unknown platform — opening web URL");
     window.location.href = FLIPKART_URL;
 }
 
-// Button click
-document.getElementById('openBtn').addEventListener('click', openFlipkartApp);
-
-// Optional: auto-run on page load
+// Auto-run on page load
 window.onload = openFlipkartApp;
 </script>
 </body>
