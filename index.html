@@ -1,92 +1,102 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Open Flipkart App</title>
-  <style>
-    body { font-family: system-ui, sans-serif; padding: 18px; }
-    #log { margin-top:12px; color:#333; white-space:pre-wrap; }
-  </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Open Flipkart (iOS fix)</title>
+  <style>body{font-family:system-ui,sans-serif;padding:18px}#log{white-space:pre-wrap;margin-top:12px;color:#333}</style>
 </head>
 <body>
-  <h3>Opening Flipkart link in app...</h3>
+  <h3>Opening Flipkart link in app (iOS fixed)...</h3>
   <div id="log"></div>
 
 <script>
 const FLIPKART_URL = "https://www.flipkart.com/lg-7-kg-5-star-inverter-direct-drive-technology-6-motion-dd-reduce-germs-allergens-steam-cycles-in-built-heater-touch-panel-fully-automatic-front-load-washing-machine-black-grey/p/itmfb403416d27a3?pid=WMNH7SPNGXDGUKVE&lid=LSTWMNH7SPNGXDGUKVEZAHO0B&otracker=clp_banner_1_3.bannerX3.BANNER_tvs-and-appliances-new-clp-store_KDYTCEI5OBKZ&fm=neo%2Fmerchandising&iid=M_4525339d-b3aa-4082-8aea-aafcffcf40c8_3.KDYTCEI5OBKZ&ppt=None&ppn=None&ssid=d38uqkzq9s0000001758723188396";
 
 const logEl = document.getElementById('log');
-function log(...args){ logEl.textContent += args.join(' ') + "\n"; console.log(...args); }
+function log(...a){ logEl.textContent += a.join(' ') + "\n"; console.log(...a); }
 
 function isAndroid(){ return /Android/i.test(navigator.userAgent); }
 function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream; }
+function isiOSSafari() {
+  // Safari on iOS: "Safari" is not present in UA, but we can detect presence of 'CriOS'/'FxiOS' for Chrome/Firefox and absence indicates Safari.
+  return isIOS() && !/CriOS|FxiOS|OPiOS|EdgiOS/i.test(navigator.userAgent);
+}
 
-function openFlipkartInApp(){
+function openInApp(){
   const webUrl = FLIPKART_URL;
-  log('Attempting to open:', webUrl);
-  let launched = false;
+  log("Target:", webUrl);
 
-  function markLaunched(){ launched = true; log('Visibility change: page hidden -> assume app opened'); }
-  document.addEventListener('visibilitychange', ()=> {
-    if (document.hidden) markLaunched();
-  }, { once: false });
+  let opened = false;
+  function markOpened(){ opened = true; log("visibilitychange -> page hidden: assume app opened"); }
+  document.addEventListener('visibilitychange', ()=> { if (document.hidden) markOpened(); });
 
+  // ANDROID: unchanged (intent)
   if (isAndroid()){
     try {
       const u = new URL(webUrl);
       const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
       const fallback = encodeURIComponent(webUrl);
       const intentUri = `intent://${hostPath}#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=${fallback};end`;
-      log('Android: navigating to intent URI');
+      log("Android: navigating to intent:", intentUri);
       window.location.href = intentUri;
+      // fallback safety
       setTimeout(()=> {
-        if (!launched) {
-          log('No app open detected — redirecting to web fallback');
+        if (!opened) {
+          log("Android fallback: opening web URL");
           window.location.href = webUrl;
-        } else {
-          log('App likely opened.');
-        }
-      }, 2000);
+        } else log("Android: app likely opened");
+      }, 1800);
     } catch(e){
-      log('Error building intent URI, falling back to web URL', e);
+      log("Android: intent build failed, opening web URL", e);
       window.location.href = webUrl;
     }
     return;
   }
 
+  // IOS: try HTTPS first to trigger Universal Links (Safari will hand full URL to app)
   if (isIOS()){
-    const schemeGuess = webUrl.replace(/^https?:\/\//, 'flipkart://');
-    log('iOS: trying scheme:', schemeGuess);
-    const ifr = document.createElement('iframe');
-    ifr.style.display = 'none';
-    ifr.src = schemeGuess;
-    document.body.appendChild(ifr);
+    log("iOS detected. Trying HTTPS (Universal Link) first...");
+    // top-level navigation to https (best chance for Universal Link)
+    window.location.href = webUrl;
 
-    setTimeout(()=>{
-      if (!launched) {
-        log('Scheme attempt not detected — trying universal https link');
-        window.location.href = webUrl;
+    // If in Safari the Universal Link works — app opens and page gets hidden
+    // If not opened after 1.2s, try scheme fallback
+    setTimeout(()=> {
+      if (!opened) {
+        // some iOS browsers may not support universal links the same way; try scheme fallback
+        const scheme = webUrl.replace(/^https?:\/\//, "flipkart://");
+        log("HTTPS attempt didn't open app (or not detected). Trying scheme fallback:", scheme);
+        // scheme fallback via iframe (older technique)
+        const ifr = document.createElement('iframe');
+        ifr.style.display='none';
+        ifr.src = scheme;
+        document.body.appendChild(ifr);
+
+        // final fallback to web after another short delay
+        setTimeout(()=>{
+          if (!opened) {
+            log("Final fallback: opening web URL");
+            window.location.href = webUrl;
+          } else {
+            log("App opened after scheme attempt");
+          }
+        }, 1200);
       } else {
-        log('App opened via scheme.');
+        log("App opened via HTTPS universal link");
       }
-    }, 800);
+    }, 1200);
 
-    setTimeout(()=>{
-      if (!launched) {
-        log('Final fallback: opening web page');
-        window.location.href = webUrl;
-      }
-    }, 2000);
     return;
   }
 
-  log('Desktop/unknown platform — opening web URL');
+  // Desktop / unknown
+  log("Non-mobile browser — opening web URL");
   window.location.href = webUrl;
 }
 
-// Auto-run on page load
-window.onload = openFlipkartInApp;
+// auto-run on load
+window.addEventListener('load', ()=> { try { openInApp(); } catch(e){ log("Error:", e); window.location.href = FLIPKART_URL; } });
 </script>
 </body>
 </html>
