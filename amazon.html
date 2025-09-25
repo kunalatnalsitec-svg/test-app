@@ -1,57 +1,193 @@
-<!doctype html>
-<html>
+        
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Redirecting to Amazon App...</title>
-  <style>body{margin:0;padding:0}</style>
+    <meta name="robots" content="noindex">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+    <title>Redirecting...</title>
+    <script>
+        var dl_found = true;
+                function detectDevice() {
+            var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            if (/android/i.test(userAgent)) {
+                return 'android';
+            }
+            if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                return 'ios';
+            }
+            return 'desktop';
+        }
+
+                function isSafari() {
+            var userAgent = navigator.userAgent;
+            return /safari/i.test(userAgent) && !/CriOS|FxiOS/i.test(userAgent);
+        }
+
+                function isMobileSafari() {
+            var userAgent = navigator.userAgent;
+            return /iPad|iPhone|iPod/.test(userAgent) && /Safari/i.test(userAgent) && !/CriOS|FxiOS/i.test(userAgent);
+        }
+
+                function isMobileBrowser() {
+            var userAgent = navigator.userAgent;
+            return /CriOS|FxiOS|chrome.*mobile|firefox.*mobile|opera.*mobile/i.test(userAgent) || isMobileSafari();
+        } 
+
+                function isFbBrowser() {
+            var userAgent = navigator.userAgent;
+            return /FBAN|FBAV/i.test(userAgent);
+        }
+
+        function isChromeMob() {
+            var userAgent = navigator.userAgent;
+            return /CriOS/i.test(userAgent);
+        } 
+
+                function isAmazonUrl(url) {
+            return url.toLowerCase().includes('amazon');
+        }
+
+                function redirect() {
+            var device = detectDevice();
+            var redirectUrl;
+            var userAgent = navigator.userAgent;
+            var regularUrl = 'https://www.amazon.in/dp/B0F4R6H3NB/';
+            var simpleRedirect = false;
+            
+            // Check for Facebook messenger iphone
+            var isFbMios = /FBCR/i.test(navigator.userAgent) && /iPhone/i.test(navigator.userAgent);
+
+
+            if (device === 'ios') {
+                redirectUrl = 'com.amazon.mobile.shopping.web://amazon.in/dp/B0F4R6H3NB/';
+            } else if (device === 'android') {
+                redirectUrl = 'com.amazon.mobile.shopping.web://amazon.in/dp/B0F4R6H3NB/';
+            } else {
+                redirectUrl = 'https://www.amazon.in/dp/B0F4R6H3NB/';
+            }
+            
+            // Override to desktop URL for Facebook app without fbclid on Amazon URLs
+            if (isFbMios) {
+                redirectUrl = 'https://www.amazon.in/dp/B0F4R6H3NB/';
+                simpleRedirect = true;
+            }
+
+            var hasPixels = false;
+
+            function performRedirect() {
+                if (device === 'desktop') {
+                                        window.location.replace(redirectUrl);
+                } else {
+                                        var now = new Date().getTime();
+                    var timeoutId, timeoutId2, timeoutId3;
+
+                    function tryOpenApp() {
+
+                        if (dl_found) { window.location = redirectUrl; }
+                        
+                        if (!simpleRedirect) {
+                                                        if (!isMobileBrowser() && (!isFbBrowser() || (isFbBrowser() && device === 'android')) || !isMobileSafari()) { 
+                                // Use Android intent URL for Android devices, regular Chrome URL for iOS
+                                var chromeUrl = device === 'android' ? 'intent:https://www.amazon.in/dp/B0F4R6H3NB/#Intent;action=android.intent.action.VIEW;S.browser_fallback_url=https%3A%2F%2Fwww.amazon.in%2Fdp%2FB0F4R6H3NB%2F;end' : 'googlechrome://www.amazon.in/dp/B0F4R6H3NB/';
+                                timeoutId = setTimeout(function() { window.location = chromeUrl; }, 500); 
+                            }
+                            
+                                                        if (!isMobileBrowser() && !isChromeMob() && !isSafari() && !isMobileSafari() && device === 'ios' || !isMobileSafari()) { 
+                                timeoutId2 = setTimeout(function() { window.location = 'x-safari-https://www.amazon.in/dp/B0F4R6H3NB/'; }, 800); 
+                            }
+                            
+                                                        timeoutId3 = setTimeout(function() { window.location = 'https://www.amazon.in/dp/B0F4R6H3NB/'; }, 1100);
+                        }
+                    }
+
+                    function goToDesktop() {
+                        window.location = 'https://www.amazon.in/dp/B0F4R6H3NB/';
+                    }
+
+                    // function handleVisibilityChange() {
+                    //     if (document.hidden) {
+                    //         clearTimeout(timeoutId);
+                    //         if (typeof timeoutId2 !== 'undefined') {
+                    //             clearTimeout(timeoutId2);
+                    //         }
+                    //         clearTimeout(timeoutId3);
+                    //     }
+                    // }
+
+                    // document.addEventListener('visibilitychange', handleVisibilityChange);
+                    tryOpenApp();
+                }
+            }
+
+            if (hasPixels) {
+                                if (document.readyState === 'complete') {
+                    performRedirect();
+                } else {
+                    window.addEventListener('load', performRedirect);
+                }
+            } else {
+                                performRedirect();
+            }
+        }
+
+                if (document.readyState === 'complete') {
+            redirect();
+        } else {
+            window.addEventListener('load', redirect);
+        }
+    </script>
+<style>
+    body {
+        text-align: center;
+        font-size: 16px;
+        width: 100%;
+        max-width: 100%;
+        padding: 1em;
+        margin: 0;
+        box-sizing: border-box;
+        font-family: sans-serif;
+        overflow-x: hidden;
+    }
+    h3 {
+        font-size: 1.2em;
+        margin-bottom: 0.5em;
+    }
+    .url-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-all;
+        hyphens: auto;
+    }
+    .url-container a {
+        font-size: 0.9em;
+        color: #0000EE;
+        text-decoration: none;
+    }
+    .pb {
+        display: block;
+        width: 100%;
+        position: fixed;
+        bottom: 1em;
+        left: 0;
+        right: 0;
+        font-size: 0.8em;
+    }
+    .pb a {
+        color: #d3d3d3;
+        text-decoration: none;
+    }
+</style>
 </head>
 <body>
-<script>
-/* ===== CONFIGURE ===== */
-const PRODUCT_URL = "https://www.amazon.in/dp/B08N5WRWNW"; // Replace with your product
-const AMAZON_PACKAGE = "com.amazon.mShop.android.shopping";
-
-/* ===== ENVIRONMENT CHECK ===== */
-const ua = navigator.userAgent || "";
-const isAndroid = /Android/i.test(ua);
-const isIOS = /iPhone|iPad|iPod/i.test(ua);
-const isInstagramiOS = /Instagram/.test(ua) && isIOS;
-
-/* ===== REDIRECT LOGIC ===== */
-function redirect() {
-  if (isAndroid) {
-    // Android intent URL
-    try {
-      const u = new URL(PRODUCT_URL);
-      const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
-      const fallback = encodeURIComponent(PRODUCT_URL);
-      const intentUri = `intent://${hostPath}#Intent;scheme=https;package=${AMAZON_PACKAGE};S.browser_fallback_url=${fallback};end`;
-      window.location.href = intentUri;
-    } catch(e){
-      window.location.href = PRODUCT_URL;
-    }
-    return;
-  }
-
-  if (isIOS) {
-    // iOS Universal Link
-    // If Instagram webview, open in Safari first
-    if (isInstagramiOS) {
-      window.location.href = PRODUCT_URL; // _blank usually triggers Safari
-    } else {
-      // Universal Link (opens app directly)
-      window.location.href = PRODUCT_URL;
-    }
-    return;
-  }
-
-  // Desktop fallback
-  window.location.href = PRODUCT_URL;
-}
-
-/* ===== EXECUTE REDIRECT ===== */
-redirect();
-</script>
+    <!-- <h3>Redirecting to...</h3>
+    <div class="url-container">
+        <a href="https://www.amazon.in/dp/B0F4R6H3NB/">
+            https://www.amazon.in/dp/B0F4R6H3NB/        </a>
+    </div> -->
+    <p class="pb"><a href="https://linktw.in/?reff=poweredby">Opening App</a></p>
 </body>
-</html>
