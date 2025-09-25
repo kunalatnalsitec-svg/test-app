@@ -3,81 +3,57 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Open in Amazon App</title>
+  <title>Amazon Auto Open (Force Click)</title>
   <style>
-    body{font-family:system-ui, Arial, sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#fafafa}
-    .card{max-width:420px;width:90%;text-align:center;padding:24px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.08);background:white}
-    .btn{display:inline-block;margin-top:18px;padding:14px 18px;border-radius:10px;background:#ff9900;color:#111;font-weight:700;text-decoration:none;font-size:16px}
-    .note{margin-top:12px;color:#666;font-size:13px}
+    body{font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#fafafa}
+    #btn{padding:16px 24px;font-size:18px;border-radius:12px;background:#FF9900;color:#111;border:none;cursor:pointer;display:none}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Open in Amazon App</h2>
-    <p class="note" id="desc">Preparing…</p>
-    <a id="openBtn" class="btn" href="#" rel="noopener noreferrer">Open in App</a>
-    <p class="note" id="help"></p>
-  </div>
+  <button id="btn">Open Amazon</button>
 
 <script>
-/* ====== CONFIGURE: put your Amazon product URL here ====== */
-const PRODUCT_URL = "https://www.amazon.in/dp/B08N5WRWNW"; // <-- replace
+const PRODUCT_URL = "https://www.amazon.in/dp/B08N5WRWNW"; // <-- replace with your product
 
-/* Utility */
 function isInstagramiOS(){
-  const ua = navigator.userAgent || '';
-  return /Instagram/.test(ua) && /iPhone|iPad|iPod/.test(ua);
+  return /Instagram/.test(navigator.userAgent) && /iPhone|iPad|iPod/.test(navigator.userAgent);
 }
-function isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent || ''); }
-function isAndroid(){ return /Android/i.test(navigator.userAgent || ''); }
+function isAndroid(){ return /Android/i.test(navigator.userAgent); }
+function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
 
-/* Elements */
-const desc = document.getElementById('desc');
-const help = document.getElementById('help');
-const openBtn = document.getElementById('openBtn');
+function openApp(){
+  if(isAndroid()){
+    const u = new URL(PRODUCT_URL);
+    const hostPath = u.hostname + u.pathname + (u.search||'') + (u.hash||'');
+    const fallback = encodeURIComponent(PRODUCT_URL);
+    window.location.href = `intent://${hostPath}#Intent;scheme=https;package=com.amazon.mShop.android.shopping;S.browser_fallback_url=${fallback};end`;
+    return;
+  }
 
-function tryOpenFromTap() {
-  // First: navigate to the HTTPS URL (Universal Link) — best chance to open exact product in app.
-  // Use window.location for top-level navigation (user gesture).
-  window.location = PRODUCT_URL;
+  if(isIOS()){
+    // First try Universal Link (HTTPS)
+    window.location.href = PRODUCT_URL;
+    // Then fallback to scheme after short delay
+    setTimeout(()=>{ window.location.href = PRODUCT_URL.replace(/^https?:\/\//,"amazon://"); },1200);
+    return;
+  }
 
-  // Also schedule scheme fallback after short delay (in case universal link doesn't open app)
-  setTimeout(() => {
-    // scheme fallback (may or may not route to exact product)
-    const scheme = PRODUCT_URL.replace(/^https?:\/\//, 'amazon://');
-    // open via top-level navigation (user gesture already happened)
-    window.location = scheme;
-  }, 1000);
+  // Desktop fallback
+  window.location.href = PRODUCT_URL;
 }
 
-/* If Instagram iOS: explain and show "Open in Safari" behavior.
-   In many cases window.open(..., '_blank') inside IG will open an external browser chooser
-   or Safari; but to be explicit we offer a link labelled 'Open in Safari' that opens the HTTPS URL in a new tab.
-*/
-if (isInstagramiOS()) {
-  desc.textContent = "Instagram's in-app browser blocks automatic app handoff on iOS. Tap the button below to open this page in Safari, then the Amazon app will be launched.";
-  openBtn.textContent = "Open in Safari → Then open in App";
-  // make the link open a new tab (often causes Instagram to open Safari)
-  openBtn.href = PRODUCT_URL;
-  openBtn.target = "_blank";
-  // Also attach a click handler so if the browser does open Safari and that page runs our universal-link logic it will still work.
-  openBtn.addEventListener('click', function(){ 
-    // after user taps, give user a hint for the next step
-    help.textContent = "If Safari opens this page, wait a second — it will try to open the Amazon app automatically.";
-    // we also attempt to open scheme in the opened tab via a delayed top-level navigation (this only runs in current webview)
-    setTimeout(()=> {
-      tryOpenFromTap();
-    }, 800);
-  }, {passive:true});
-} else {
-  // Non-Instagram or non-iOS: do a single-tap attempt that tries Universal Link then scheme fallback
-  desc.textContent = "Tap the button to open the Amazon product in the Amazon app (or in your browser if the app isn't installed).";
-  openBtn.href = "#";
-  openBtn.addEventListener('click', function(e){
-    e.preventDefault();
-    tryOpenFromTap();
-  }, {passive:true});
-}
+// Force click trick
+window.onload = ()=>{
+  const btn = document.getElementById("btn");
+  btn.style.display = "block"; // required to exist for click event to be considered user gesture
+
+  // Simulate a user click after a tiny delay
+  setTimeout(()=>{
+    btn.click();
+  },50);
+
+  btn.addEventListener("click", openApp);
+};
 </script>
 </body>
 </html>
