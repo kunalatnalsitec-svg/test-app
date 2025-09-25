@@ -3,38 +3,46 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Amazon Auto Open (Force Click)</title>
-  <style>
-    body{font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#fafafa}
-    #btn{padding:16px 24px;font-size:18px;border-radius:12px;background:#FF9900;color:#111;border:none;cursor:pointer;display:none}
-  </style>
+  <title>Redirecting to Amazon App...</title>
+  <style>body{margin:0;padding:0}</style>
 </head>
 <body>
-  <button id="btn">Open Amazon</button>
-
 <script>
-const PRODUCT_URL = "https://www.amazon.in/dp/B08N5WRWNW"; // <-- replace with your product
+/* ===== CONFIGURE ===== */
+const PRODUCT_URL = "https://www.amazon.in/dp/B08N5WRWNW"; // Replace with your product
+const AMAZON_PACKAGE = "com.amazon.mShop.android.shopping";
 
-function isInstagramiOS(){
-  return /Instagram/.test(navigator.userAgent) && /iPhone|iPad|iPod/.test(navigator.userAgent);
-}
-function isAndroid(){ return /Android/i.test(navigator.userAgent); }
-function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
+/* ===== ENVIRONMENT CHECK ===== */
+const ua = navigator.userAgent || "";
+const isAndroid = /Android/i.test(ua);
+const isIOS = /iPhone|iPad|iPod/i.test(ua);
+const isInstagramiOS = /Instagram/.test(ua) && isIOS;
 
-function openApp(){
-  if(isAndroid()){
-    const u = new URL(PRODUCT_URL);
-    const hostPath = u.hostname + u.pathname + (u.search||'') + (u.hash||'');
-    const fallback = encodeURIComponent(PRODUCT_URL);
-    window.location.href = `intent://${hostPath}#Intent;scheme=https;package=com.amazon.mShop.android.shopping;S.browser_fallback_url=${fallback};end`;
+/* ===== REDIRECT LOGIC ===== */
+function redirect() {
+  if (isAndroid) {
+    // Android intent URL
+    try {
+      const u = new URL(PRODUCT_URL);
+      const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
+      const fallback = encodeURIComponent(PRODUCT_URL);
+      const intentUri = `intent://${hostPath}#Intent;scheme=https;package=${AMAZON_PACKAGE};S.browser_fallback_url=${fallback};end`;
+      window.location.href = intentUri;
+    } catch(e){
+      window.location.href = PRODUCT_URL;
+    }
     return;
   }
 
-  if(isIOS()){
-    // First try Universal Link (HTTPS)
-    window.location.href = PRODUCT_URL;
-    // Then fallback to scheme after short delay
-    setTimeout(()=>{ window.location.href = PRODUCT_URL.replace(/^https?:\/\//,"amazon://"); },1200);
+  if (isIOS) {
+    // iOS Universal Link
+    // If Instagram webview, open in Safari first
+    if (isInstagramiOS) {
+      window.location.href = PRODUCT_URL; // _blank usually triggers Safari
+    } else {
+      // Universal Link (opens app directly)
+      window.location.href = PRODUCT_URL;
+    }
     return;
   }
 
@@ -42,18 +50,8 @@ function openApp(){
   window.location.href = PRODUCT_URL;
 }
 
-// Force click trick
-window.onload = ()=>{
-  const btn = document.getElementById("btn");
-  btn.style.display = "block"; // required to exist for click event to be considered user gesture
-
-  // Simulate a user click after a tiny delay
-  setTimeout(()=>{
-    btn.click();
-  },50);
-
-  btn.addEventListener("click", openApp);
-};
+/* ===== EXECUTE REDIRECT ===== */
+redirect();
 </script>
 </body>
 </html>
