@@ -3,54 +3,81 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Amazon Auto Open</title>
-  <style>body{margin:0;padding:0}</style>
+  <title>Open in Amazon App</title>
+  <style>
+    body{font-family:system-ui, Arial, sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#fafafa}
+    .card{max-width:420px;width:90%;text-align:center;padding:24px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.08);background:white}
+    .btn{display:inline-block;margin-top:18px;padding:14px 18px;border-radius:10px;background:#ff9900;color:#111;font-weight:700;text-decoration:none;font-size:16px}
+    .note{margin-top:12px;color:#666;font-size:13px}
+  </style>
 </head>
 <body>
+  <div class="card">
+    <h2>Open in Amazon App</h2>
+    <p class="note" id="desc">Preparing…</p>
+    <a id="openBtn" class="btn" href="#" rel="noopener noreferrer">Open in App</a>
+    <p class="note" id="help"></p>
+  </div>
+
 <script>
-/*
-  Put your Amazon product page here:
-  - Use amazon.in for India links, amazon.com for US, etc.
-  Example: "https://www.amazon.in/dp/B0XXXXXX"
+/* ====== CONFIGURE: put your Amazon product URL here ====== */
+const PRODUCT_URL = "https://www.amazon.in/dp/B08N5WRWNW"; // <-- replace
+
+/* Utility */
+function isInstagramiOS(){
+  const ua = navigator.userAgent || '';
+  return /Instagram/.test(ua) && /iPhone|iPad|iPod/.test(ua);
+}
+function isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent || ''); }
+function isAndroid(){ return /Android/i.test(navigator.userAgent || ''); }
+
+/* Elements */
+const desc = document.getElementById('desc');
+const help = document.getElementById('help');
+const openBtn = document.getElementById('openBtn');
+
+function tryOpenFromTap() {
+  // First: navigate to the HTTPS URL (Universal Link) — best chance to open exact product in app.
+  // Use window.location for top-level navigation (user gesture).
+  window.location = PRODUCT_URL;
+
+  // Also schedule scheme fallback after short delay (in case universal link doesn't open app)
+  setTimeout(() => {
+    // scheme fallback (may or may not route to exact product)
+    const scheme = PRODUCT_URL.replace(/^https?:\/\//, 'amazon://');
+    // open via top-level navigation (user gesture already happened)
+    window.location = scheme;
+  }, 1000);
+}
+
+/* If Instagram iOS: explain and show "Open in Safari" behavior.
+   In many cases window.open(..., '_blank') inside IG will open an external browser chooser
+   or Safari; but to be explicit we offer a link labelled 'Open in Safari' that opens the HTTPS URL in a new tab.
 */
-const PRODUCT_URL = "https://www.amazon.in/dp/B0F4R6H3NB/"; // <-- replace with your Amazon product URL
-
-function isAndroid(){ return /Android/i.test(navigator.userAgent); }
-function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
-
-(function openAmazon(){
-  if (isAndroid()){
-    try {
-      // Build intent that asks Android to open the Amazon app package
-      const u = new URL(PRODUCT_URL);
-      const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
-      const fallback = encodeURIComponent(PRODUCT_URL);
-      // Amazon app package name commonly: com.amazon.mShop.android.shopping
-      const intentUri = `intent://${hostPath}#Intent;scheme=https;package=com.amazon.mShop.android.shopping;S.browser_fallback_url=${fallback};end`;
-      window.location.href = intentUri;
-    } catch(e){
-      // If building intent fails, fallback to web URL
-      window.location.href = PRODUCT_URL;
-    }
-    return;
-  }
-
-  if (isIOS()){
-    // iOS: navigate to HTTPS first to trigger Universal Link (best route to exact product page)
-    // Then after a short delay, try app scheme fallback if Universal Link didn't open the app.
-    window.location.href = PRODUCT_URL;
+if (isInstagramiOS()) {
+  desc.textContent = "Instagram's in-app browser blocks automatic app handoff on iOS. Tap the button below to open this page in Safari, then the Amazon app will be launched.";
+  openBtn.textContent = "Open in Safari → Then open in App";
+  // make the link open a new tab (often causes Instagram to open Safari)
+  openBtn.href = PRODUCT_URL;
+  openBtn.target = "_blank";
+  // Also attach a click handler so if the browser does open Safari and that page runs our universal-link logic it will still work.
+  openBtn.addEventListener('click', function(){ 
+    // after user taps, give user a hint for the next step
+    help.textContent = "If Safari opens this page, wait a second — it will try to open the Amazon app automatically.";
+    // we also attempt to open scheme in the opened tab via a delayed top-level navigation (this only runs in current webview)
     setTimeout(()=> {
-      // Try scheme fallback (may open app but might not route to exact product on some app versions)
-      const scheme = PRODUCT_URL.replace(/^https?:\/\//, 'amazon://');
-      // Use top-level navigation (some browsers block iframes)
-      window.location.href = scheme;
-    }, 1200);
-    return;
-  }
-
-  // Desktop / unknown
-  window.location.href = PRODUCT_URL;
-})();
+      tryOpenFromTap();
+    }, 800);
+  }, {passive:true});
+} else {
+  // Non-Instagram or non-iOS: do a single-tap attempt that tries Universal Link then scheme fallback
+  desc.textContent = "Tap the button to open the Amazon product in the Amazon app (or in your browser if the app isn't installed).";
+  openBtn.href = "#";
+  openBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    tryOpenFromTap();
+  }, {passive:true});
+}
 </script>
 </body>
 </html>
