@@ -1,38 +1,92 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Flipkart Auto Open</title>
-  <style>body{margin:0;padding:0}</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Open Myntra App</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 18px; }
+    #log { margin-top:12px; color:#333; white-space:pre-wrap; }
+  </style>
 </head>
 <body>
+  <h3>Opening Myntra link in app...</h3>
+  <div id="log"></div>
+
 <script>
-const PRODUCT_URL = "https://www.amazon.in/events/greatindianfestival/";
+const FLIPKART_URL = "https://www.amazon.in/events/greatindianfestival/";
+
+const logEl = document.getElementById('log');
+function log(...args){ logEl.textContent += args.join(' ') + "\n"; console.log(...args); }
 
 function isAndroid(){ return /Android/i.test(navigator.userAgent); }
-function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
+function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream; }
 
-function openFlipkart() {
-  if(isAndroid()){
-    const u = new URL(PRODUCT_URL);
-    const hostPath = u.hostname + u.pathname + (u.search||'') + (u.hash||'');
-    const fallback = encodeURIComponent(PRODUCT_URL);
-    window.location.href = `intent://${hostPath}#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=${fallback};end`;
+function openFlipkartInApp(){
+  const webUrl = FLIPKART_URL;
+  log('Attempting to open:', webUrl);
+  let launched = false;
+
+  function markLaunched(){ launched = true; log('Visibility change: page hidden -> assume app opened'); }
+  document.addEventListener('visibilitychange', ()=> {
+    if (document.hidden) markLaunched();
+  }, { once: false });
+
+  if (isAndroid()){
+    try {
+      const u = new URL(webUrl);
+      const hostPath = u.hostname + u.pathname + (u.search || '') + (u.hash || '');
+      const fallback = encodeURIComponent(webUrl);
+      const intentUri = `intent://${hostPath}#Intent;scheme=https;package=com.amazon.android;S.browser_fallback_url=${fallback};end`;
+      log('Android: navigating to intent URI');
+      window.location.href = intentUri;
+      setTimeout(()=> {
+        if (!launched) {
+          log('No app open detected — redirecting to web fallback');
+          window.location.href = webUrl;
+        } else {
+          log('App likely opened.');
+        }
+      }, 2000);
+    } catch(e){
+      log('Error building intent URI, falling back to web URL', e);
+      window.location.href = webUrl;
+    }
     return;
   }
-  if(isIOS()){
-    // Trigger Universal Link first (opens correct product in app if installed)
-    window.location.href = PRODUCT_URL;
-    // After short delay, try scheme fallback in case Universal Link fails
-    setTimeout(()=>{ window.location.href = PRODUCT_URL.replace(/^https?:\/\//,"amazon://"); },1200);
+
+  if (isIOS()){
+    const schemeGuess = webUrl.replace(/^https?:\/\//, 'amazon://');
+    log('iOS: trying scheme:', schemeGuess);
+    const ifr = document.createElement('iframe');
+    ifr.style.display = 'none';
+    ifr.src = schemeGuess;
+    document.body.appendChild(ifr);
+
+    setTimeout(()=>{
+      if (!launched) {
+        log('Scheme attempt not detected — trying universal https link');
+        window.location.href = webUrl;
+      } else {
+        log('App opened via scheme.');
+      }
+    }, 800);
+
+    setTimeout(()=>{
+      if (!launched) {
+        log('Final fallback: opening web page');
+        window.location.href = webUrl;
+      }
+    }, 2000);
     return;
   }
-  // Desktop fallback
-  window.location.href = PRODUCT_URL;
+
+  log('Desktop/unknown platform — opening web URL');
+  window.location.href = webUrl;
 }
 
-window.onload = openFlipkart;
+// Auto-run on page load
+window.onload = openFlipkartInApp;
 </script>
 </body>
 </html>
