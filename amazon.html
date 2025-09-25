@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Flipkart Auto Open</title>
+  <style>body{margin:0;padding:0}</style>
+</head>
+<body>
+<script>
+const PRODUCT_URL = "https://www.amazon.in/events/greatindianfestival/";
+
+function isAndroid(){ return /Android/i.test(navigator.userAgent); }
+function isIOS(){ return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
+
+function openFlipkart() {
+  if(isAndroid()){
+    const u = new URL(PRODUCT_URL);
+    const hostPath = u.hostname + u.pathname + (u.search||'') + (u.hash||'');
+    const fallback = encodeURIComponent(PRODUCT_URL);
+    window.location.href = `intent://${hostPath}#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=${fallback};end`;
+    return;
+  }
+  if(isIOS()){
+    // Trigger Universal Link first (opens correct product in app if installed)
+    window.location.href = PRODUCT_URL;
+    // After short delay, try scheme fallback in case Universal Link fails
+    setTimeout(()=>{ window.location.href = PRODUCT_URL.replace(/^https?:\/\//,"amazon://"); },1200);
+    return;
+  }
+  // Desktop fallback
+  window.location.href = PRODUCT_URL;
+}
+
+window.onload = openFlipkart;
+</script>
+</body>
+</html>
